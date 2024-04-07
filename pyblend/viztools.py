@@ -360,6 +360,8 @@ def generate(mesh_type="VERTEX", length=1.0, subdivision=2):
             ]
         else:
             raise ValueError("unsupported subdivision: {}".format(subdivision))
+        r = length / 2
+        dv = [(i[0] * r, i[1] * r, i[2] * r) for i in dv]
         return dv, [], df
     else:
         return (

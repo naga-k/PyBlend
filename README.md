@@ -120,10 +120,9 @@ Please note that the `-noaudio` flag is included in order to prevent any audio d
 
 - [ ] Documentation.
 
-## 
-
-## Other Resources
+## Acknowledgements and Other Resources
 - [Blender Python API](https://docs.blender.org/api/current/index.html)
 - [DLR-RM/BlenderProc](https://github.com/DLR-RM/BlenderProc)
 - [yuki-koyama/blender-cli-rendering](https://github.com/yuki-koyama/blender-cli-rendering)
 - [njanakiev/blender-scripting](https://github.com/njanakiev/blender-scripting)
+- [Objaverse-XL Rendering Script](https://github.com/allenai/objaverse-xl/tree/main/scripts/rendering)

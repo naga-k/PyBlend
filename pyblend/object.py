@@ -24,6 +24,28 @@ def create_monkey(location, rotation, scale, name=None) -> bpy.types.Object:
     return monkey
 
 
+def delete_invisible_objects() -> None:
+    """Deletes all invisible objects in the scene.
+
+    Returns:
+        None
+    """
+    bpy.ops.object.select_all(action="DESELECT")
+    scene = bpy.context.scene
+    for obj in scene.objects:
+        if obj.hide_viewport or obj.hide_render:
+            obj.hide_viewport = False
+            obj.hide_render = False
+            obj.hide_select = False
+            obj.select_set(True)
+    bpy.ops.object.delete()
+
+    # Delete invisible collections
+    invisible_collections = [col for col in bpy.data.collections if col.hide_viewport]
+    for col in invisible_collections:
+        bpy.data.collections.remove(col)
+
+
 def load_obj(obj_root, obj_name, center=True, join=False, smart_uv=False):
     """
     Load obj/ply/glb file to Blender

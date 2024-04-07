@@ -14,17 +14,31 @@ def get_vertices(obj_or_mesh: bpy.types.Object or bpy.types.Mesh, mode="obj"):
         obj_or_mesh (bpy.types.Object or bpy.types.Mesh): The object or mesh.
         mode (str, optional): "obj" or "world". Object space or world space. Defaults to "obj".
     """
-    mesh = obj_or_mesh.data if isinstance(obj_or_mesh, bpy.types.Object) else obj_or_mesh
-    assert mesh is not None, "mesh is None"
-    vertices = np.ones(len(mesh.vertices) * 3)
-    obj_or_mesh.data.vertices.foreach_get("co", vertices)
-    vertices = vertices.reshape(-1, 3)  # (N, 3)
+    meshes = find_all_meshes(obj_or_mesh)
+    assert len(meshes) > 0, "No mesh found"
+    mesh_list = []
+    vertices_list = []
+    for mesh in meshes:
+        vertices = np.ones(len(mesh.data.vertices) * 3)
+        mesh.data.vertices.foreach_get("co", vertices)
+        vertices = vertices.reshape(-1, 3)  # (N, 3)
+        vertices_list.append(vertices)
+        mesh_list.append(mesh)
+
     if mode == "world":
-        # vertices = np.array([obj_or_mesh.matrix_world @ Vector(v) for v in vertices])
-        matrix_world = np.array(obj_or_mesh.matrix_world)  # (4, 4)
-        vertices = np.concatenate([vertices, np.ones((len(vertices), 1))], axis=1)  # (N, 4)
-        vertices = vertices @ matrix_world.T  # (N, 4) @ (4, 4) -> (N, 4)
-        vertices = vertices[:, :3]
+        for i, (obj, vertices) in enumerate(zip(mesh_list, vertices_list)):
+            matrix_world = np.ones((4, 4))
+            parent = obj
+            while parent is not None:
+                matrix_world = matrix_world @ np.array(parent.matrix_world)
+                parent = parent.parent
+
+            vertices = np.concatenate([vertices, np.ones((len(vertices), 1))], axis=1)  # (N, 4)
+            vertices = vertices @ matrix_world.T  # (N, 4) @ (4, 4) -> (N, 4)
+            vertices = vertices[:, :3]
+            vertices_list[i] = vertices
+    else:
+        vertices = np.concatenate(vertices_list, axis=0)
     return vertices
 
 
