@@ -27,18 +27,11 @@ def get_vertices(obj_or_mesh: bpy.types.Object or bpy.types.Mesh, mode="obj"):
 
     if mode == "world":
         for i, (obj, vertices) in enumerate(zip(mesh_list, vertices_list)):
-            matrix_world = np.ones((4, 4))
-            parent = obj
-            while parent is not None:
-                matrix_world = matrix_world @ np.array(parent.matrix_world)
-                parent = parent.parent
-
             vertices = np.concatenate([vertices, np.ones((len(vertices), 1))], axis=1)  # (N, 4)
-            vertices = vertices @ matrix_world.T  # (N, 4) @ (4, 4) -> (N, 4)
+            vertices = vertices @ np.array(obj.matrix_world).T  # (N, 4) @ (4, 4) -> (N, 4)
             vertices = vertices[:, :3]
             vertices_list[i] = vertices
-    else:
-        vertices = np.concatenate(vertices_list, axis=0)
+    vertices = np.concatenate(vertices_list, axis=0)
     return vertices
 
 
