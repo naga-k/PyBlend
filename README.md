@@ -60,3 +60,11 @@ Like `teaser.gif`, you can use PyBlend to render normal and depth images. By usi
 
 ```shell
 $ blender_app -b -P scripts/teaser.py -- --begin 0 --end 60
+```
+
+### 2. Render Shark Dataset
+To render the Shark dataset using PyBlend, you can use the following command:
+
+```shell
+$ blender_app -b -P shark-render2.py -- --input "Shark/meshes/model.obj" --num 12 --name "shark_render" --texture_path "Shark/materials/textures/texture.png" --split "train"
+```
