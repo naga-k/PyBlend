@@ -1,6 +1,10 @@
 <h1 align="center"> PyBlend </h1>
 
 <p align="center">
+    <b>This is a fork of the original PyBlend project, adapted for rendering images of OBJ files.</b>
+</p>
+
+<p align="center">
     <b>PyBlend is a Python library for <a href="https://www.blender.org/">Blender</a>. It provides a variety of valuable functions for Blender scripting.</b>
 </p>
 <p align="center">
@@ -34,6 +38,9 @@ Setting up the environment for Python in Blender can be challenging. However, fo
     $ ./blender-3.6.0-linux-x64/3.6/python/bin/python3.10 get-pip.py
     ```
 
+      Note: The Blender version used to adapt PyBlend (Blender 3.6.0) is compatible only with CUDA 11.4. Ensure your system meets this requirement for optimal performance.
+
+
 3. Install PyBlend.
 
     ```bash
@@ -62,9 +69,24 @@ Like `teaser.gif`, you can use PyBlend to render normal and depth images. By usi
 $ blender_app -b -P scripts/teaser.py -- --begin 0 --end 60
 ```
 
-### 2. Render Shark Dataset
-To render the Shark dataset using PyBlend, you can use the following command:
+### 2. Render Google Scanned Objects Dataset
 
-```shell
-$ blender_app -b -P shark-render2.py -- --input "Shark/meshes/model.obj" --num 12 --name "shark_render" --texture_path "Shark/materials/textures/texture.png" --split "train"
+To render images for each object in the dataset using PyBlend, follow these steps:
+
+#### 2.1 Single Job for Each Object
+
+To render images for the "Weisshai_Great_White_Shark" dataset, use the following command:
+
+```bash
+$ blender_app -b -P google-renderer-2.py -- --data_dir "/path/to/data" --name "Weisshai_Great_White_Shark" --output_dir "/path/to/output" --split "train" --radius 2.5 --num 100
 ```
+
+
+### 2.2 Submit Parallel Jobs
+To render images for all objects in the dataset in parallel, make sure you have created the submit_jobs.sh script. Then, execute the following command to submit all jobs:
+
+```bash
+$ bash submit_jobs.sh
+```
+
+This will generate and submit a separate SLURM job for each object directory, allowing for parallel rendering of images.

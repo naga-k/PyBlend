@@ -165,3 +165,8 @@ cython_debug/
 get-pip.py
 blender-3.6.0-linux-x64.tar.xz
 blender-3.6.0-linux-x64
+
+/data
+/renders
+
+/jobs
