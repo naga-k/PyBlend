@@ -98,6 +98,7 @@ def get_object_vertices(obj):
     return vertices
 
 def plot_vertices_and_cameras(vertices, camera_positions, lights, output_path):
+
     """Plot the vertices of the object, camera positions, and light positions, and save as HTML."""
     x_verts, y_verts, z_verts = zip(*vertices) if vertices else ([], [], [])
     x_cams, y_cams, z_cams = zip(*camera_positions) if camera_positions else ([], [], [])
@@ -158,8 +159,7 @@ def plot_vertices_and_cameras(vertices, camera_positions, lights, output_path):
     
     fig.update_layout(height=1600, width=1600, title_text="Object Vertices, Camera Positions, and Lights")
     write_html(fig, file=output_path, auto_open=False)
-    print(f"Combined plot (vertices, cameras, lights) saved to {output_path}")
-    
+
 def render_and_save_extrinsics(args):
     config_render(res_x=800, res_y=800, transparent=True)
     remover = BlenderRemover()
@@ -213,19 +213,17 @@ def render_and_save_extrinsics(args):
     camera_angle_x = camera.data.angle_x
     camera_angle_y = camera.data.angle_y
 
-    r = args.radius 
-
     if args.split == 'train':
         # Random camera placement for training
         for i in range(args.num):
             theta = np.random.uniform(0, 2 * np.pi)
             phi = np.random.uniform(0, np.pi)
-            x = r * np.sin(phi) * np.cos(theta)
-            y = r * np.sin(phi) * np.sin(theta)
-            z = r * np.cos(phi)
+            x = args.radius * np.sin(phi) * np.cos(theta)
+            y = args.radius * np.sin(phi) * np.sin(theta)
+            z = args.radius * np.cos(phi)
             camera.location = (x, y, z)
             look_at(camera, obj.location)
-            render_image_path = os.path.join(output_dir, f"{args.split}",f"{args.name}_{i:04d}.png")
+            render_image_path = os.path.join(output_dir, f"{args.split}", f"{args.name}_{i:04d}.png")
             render_image(render_image_path)
 
             extrinsics = get_camera_extrinsics(camera)
@@ -246,17 +244,26 @@ def render_and_save_extrinsics(args):
             }
             frames_list.append(frame_info)
 
-            camera_positions.append(camera.location)
+            camera_positions.append(camera.location.copy())
+
     elif args.split == 'test':
-        # Fixed camera placements for testing
-        angles = np.linspace(0, 2 * np.pi, args.num, endpoint=False)
-        for i, angle in enumerate(angles):
-            x = r * np.cos(angle)
-            y = r * np.sin(angle)
-            z = 0
+        # Spiral camera placement
+        num_cameras = args.num
+        radius = args.radius
+        height_step = 2 * radius / num_cameras  # Adjust height step to spread the spiral along the z-axis
+
+        for i in range(num_cameras):
+            angle = np.linspace(0, 2 * np.pi, num_cameras, endpoint=False)[i]
+            height = i * height_step - radius  # Spread the spiral along the z-axis
+
+            x = radius * np.cos(angle)
+            y = radius * np.sin(angle)
+            z = height
+
             camera.location = (x, y, z)
             look_at(camera, obj.location)
-            render_image_path = os.path.join(output_dir, f"{args.split}",f"{args.name}_{i:04d}.png")
+            
+            render_image_path = os.path.join(output_dir, f"{args.split}", f"{args.name}_{i:04d}.png")
             render_image(render_image_path)
 
             extrinsics = get_camera_extrinsics(camera)
@@ -275,12 +282,9 @@ def render_and_save_extrinsics(args):
                 "camera_angle_x": camera_angle_x,
                 "camera_angle_y": camera_angle_y
             }
-            
             frames_list.append(frame_info)
 
-            camera_positions.append(camera.location)
-
-
+            camera_positions.append(camera.location.copy())
 
     # Save transform JSON
     transform_json_path = os.path.join(output_dir, f"transforms_{args.split}.json")
