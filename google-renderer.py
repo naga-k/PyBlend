@@ -11,6 +11,14 @@ from pyblend.lighting import config_world, create_light
 from pyblend.utils import BlenderRemover, ArgumentParserForBlender
 from pyblend.object import load_obj, create_plane
 from pyblend.transform import look_at, random_loc
+from icosphere import icosphere
+
+def icosphere_points(nu, radius=1.0):
+    # Generate icosphere vertices
+    vertices, _ = icosphere(nu=nu)
+    vertices *= radius
+    return vertices
+
 
 def load_texture(texture_path):
     """Load texture image from file."""
@@ -207,44 +215,81 @@ def render_and_save_extrinsics(args):
     camera_positions = []
 
     # Output directory setup with respect to split
-    output_dir = os.path.join(args.output_dir, f"{args.name}_{args.radius}_{args.num}")
+    output_dir = os.path.join(args.output_dir, f"{args.name}")
     os.makedirs(output_dir, exist_ok=True)
 
     camera_angle_x = camera.data.angle_x
     camera_angle_y = camera.data.angle_y
 
     if args.split == 'train':
-        # Random camera placement for training
-        for i in range(args.num):
-            theta = np.random.uniform(0, 2 * np.pi)
-            phi = np.random.uniform(0, np.pi)
-            x = args.radius * np.sin(phi) * np.cos(theta)
-            y = args.radius * np.sin(phi) * np.sin(theta)
-            z = args.radius * np.cos(phi)
-            camera.location = (x, y, z)
-            look_at(camera, obj.location)
-            render_image_path = os.path.join(output_dir, f"{args.split}", f"{args.name}_{i:04d}.png")
-            render_image(render_image_path)
+            
+        if args.method == "random":
+            # Random camera placement for training
+            for i in range(args.num):
+                theta = np.random.uniform(0, 2 * np.pi)
+                phi = np.random.uniform(0, np.pi)
+                x = args.radius * np.sin(phi) * np.cos(theta)
+                y = args.radius * np.sin(phi) * np.sin(theta)
+                z = args.radius * np.cos(phi)
+                camera.location = (x, y, z)
+                look_at(camera, obj.location)
+                render_image_path = os.path.join(output_dir, f"{args.split}", f"{args.name}_{i:04d}.png")
+                render_image(render_image_path)
 
-            extrinsics = get_camera_extrinsics(camera)
-            extrinsics['frame'] = f"{args.name}_{i:04d}.png"
-            extrinsics_list.append(extrinsics)
+                extrinsics = get_camera_extrinsics(camera)
+                extrinsics['frame'] = f"{args.name}_{i:04d}.png"
+                extrinsics_list.append(extrinsics)
 
-            intrinsics = get_camera_intrinsics(camera)
-            intrinsics_list.append(intrinsics)
+                intrinsics = get_camera_intrinsics(camera)
+                intrinsics_list.append(intrinsics)
 
-            rotation = get_camera_rotation(camera)
-            frame_info = {
-                "file_path": f"./{args.split}/{args.name}_{i:04d}.png",
-                "rotation": rotation,
-                "transform_matrix": extrinsics['transform_matrix'],
-                "focal_length": intrinsics['focal_length'],
-                "camera_angle_x": camera_angle_x,
-                "camera_angle_y": camera_angle_y
-            }
-            frames_list.append(frame_info)
+                rotation = get_camera_rotation(camera)
+                frame_info = {
+                    "file_path": f"./{args.split}/{args.name}_{i:04d}.png",
+                    "rotation": rotation,
+                    "transform_matrix": extrinsics['transform_matrix'],
+                    "focal_length": intrinsics['focal_length'],
+                    "camera_angle_x": camera_angle_x,
+                    "camera_angle_y": camera_angle_y
+                }
+                frames_list.append(frame_info)
 
-            camera_positions.append(camera.location.copy())
+                camera_positions.append(camera.location.copy())
+
+        elif args.method == "icosphere":
+            
+            # Icosphere-based camera placement for training
+            
+            icosphere_camera_positions = icosphere_points(nu=args.nu, radius=args.radius)
+
+            print(f"Number of camera positions: {len(icosphere_camera_positions)}")
+            print(f"Camera positions: {icosphere_camera_positions}")
+
+            for i, pos in enumerate(icosphere_camera_positions):
+                camera.location = np.array(pos)
+                look_at(camera, obj.location)
+                render_image_path = os.path.join(output_dir, f"{args.split}", f"{args.name}_{i:04d}.png")
+                render_image(render_image_path)
+
+                extrinsics = get_camera_extrinsics(camera)
+                extrinsics['frame'] = f"{args.name}_{i:04d}.png"
+                extrinsics_list.append(extrinsics)
+
+                intrinsics = get_camera_intrinsics(camera)
+                intrinsics_list.append(intrinsics)
+
+                rotation = get_camera_rotation(camera)
+                frame_info = {
+                    "file_path": f"./{args.split}/{args.name}_{i:04d}.png",
+                    "rotation": rotation,
+                    "transform_matrix": extrinsics['transform_matrix'],
+                    "focal_length": intrinsics['focal_length'],
+                    "camera_angle_x": camera_angle_x,
+                    "camera_angle_y": camera_angle_y
+                }
+                frames_list.append(frame_info)
+
+                camera_positions.append(camera.location.copy())
 
     elif args.split == 'test':
         # Spiral camera placement
@@ -302,11 +347,20 @@ def render_and_save_extrinsics(args):
 if __name__ == "__main__":
     parser = ArgumentParserForBlender()
     parser.add_argument('--name', type=str, help='Dataset name', required=True)
-    parser.add_argument('--num', type=int, help='Number of images to render', required=True)
-    parser.add_argument('--split', type=str, help='Dataset split (train/test)', choices=['train', 'test'], required=True)
+    parser.add_argument('--num', type=int, help='Number of images to render', default=100)
+    parser.add_argument('--split', type=str, help='Dataset split (train/test)', choices=['train', 'test'], default='train')
     parser.add_argument('--output_dir', type=str, help='Output directory', required=True)
     parser.add_argument('--data_dir', type=str, help='Input data directory', required=True)
     parser.add_argument('--radius', type=float, help='Radius for camera placement', required=True)
+    parser.add_argument('--method', type=str, help='Camera placement method', choices=['random', 'icosphere'])
+    parser.add_argument('--nu', type=int, help='Number of icosphere points', default = 2) #42 images for nu=2, 162 images for nu=3, 642 images for nu=4
+    #12, 42, 92, 162, 252, 362, 492, 642, 812, 1002, 1212, 1442, 1692, 1962,
     args = parser.parse_args()
+
+    if args.split == "test":
+        print("Rendering test images...")
+        if args.method:
+            print("The --method argument is being discarded as it is not used in the 'test' split.")
+
 
     render_and_save_extrinsics(args)
